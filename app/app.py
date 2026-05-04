@@ -2,6 +2,9 @@ import os
 import sys
 import math
 import random
+import requests
+from urllib.parse import quote_plus
+
 import pandas as pd
 import streamlit as st
 
@@ -104,9 +107,66 @@ def get_sentiment(title):
     random.seed(abs(hash(title)) % 100000)
     return random.randint(74, 97)
 
-def get_youtube(title):
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
+YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 
-    return "https://www.youtube.com/watch?v=YoHD9XEInc0"
+def clean_movie_title(title):
+
+    if not isinstance(title, str):
+        return ""
+
+    # Converts titles like "Toy Story (1995)" into "Toy Story"
+    if title.endswith(")") and "(" in title:
+        return title.rsplit("(", 1)[0].strip()
+
+    return title.strip()
+
+def get_youtube_search_url(title):
+
+    clean_title = clean_movie_title(title)
+    query = quote_plus(f"{clean_title} movie trailer review")
+    return f"https://www.youtube.com/results?search_query={query}"
+
+def get_youtube_trailer(title):
+
+    if not YOUTUBE_API_KEY:
+        return None
+
+    clean_title = clean_movie_title(title)
+
+    params = {
+        "part": "snippet",
+        "q": f"{clean_title} official movie trailer",
+        "key": YOUTUBE_API_KEY,
+        "type": "video",
+        "maxResults": 1,
+        "videoEmbeddable": "true",
+        "safeSearch": "moderate",
+    }
+
+    try:
+        response = requests.get(YOUTUBE_SEARCH_URL, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        items = data.get("items", [])
+        if not items:
+            return None
+
+        item = items[0]
+        video_id = item["id"]["videoId"]
+        snippet = item["snippet"]
+
+        return {
+            "title": snippet.get("title", ""),
+            "channel": snippet.get("channelTitle", ""),
+            "thumbnail": snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
+            "url": f"https://www.youtube.com/watch?v={video_id}",
+        }
+
+    except Exception as e:
+        st.caption(f"YouTube API unavailable: {e}")
+        return None
 
 def hype_score(title):
 
@@ -436,8 +496,29 @@ def main():
             key="yt"
         )
 
-        st.write(f"Top review for **{movie}**")
-        st.video(get_youtube(movie))
+        trailer = get_youtube_trailer(movie)
+
+        if trailer:
+            st.write(f"Trailer for **{movie}**")
+            st.caption(f"{trailer['title']} | Channel: {trailer['channel']}")
+
+            # Autoplay works best when muted because most browsers block unmuted autoplay.
+            st.video(
+                trailer["url"],
+                autoplay=True,
+                muted=True
+            )
+
+            st.markdown(f"[Open on YouTube]({trailer['url']})")
+        else:
+            search_url = get_youtube_search_url(movie)
+
+            if not YOUTUBE_API_KEY:
+                st.info("Add a YOUTUBE_API_KEY environment variable to fetch real trailers automatically.")
+            else:
+                st.warning("No trailer found from the YouTube API.")
+
+            st.markdown(f"[🔎 Search YouTube for {movie}]({search_url})")
 
     # ------------------------------------------
     # METRICS
