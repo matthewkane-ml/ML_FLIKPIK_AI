@@ -8,6 +8,19 @@ from urllib.parse import quote_plus
 import pandas as pd
 import streamlit as st
 
+
+#...................................
+#Poster
+#..................
+
+import os
+import streamlit as st
+
+TMDB_API_KEY = os.getenv("c5a29fa482955c241150b9422368d922") or st.secrets.get("c5a29fa482955c241150b9422368d922", None)
+
+if not TMDB_API_KEY:
+    st.warning("TMDB_API_KEY is missing. Posters will not load.")
+    
 # ----------------------------------------------------------
 # PATH SETUP
 # ----------------------------------------------------------
