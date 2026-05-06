@@ -16,7 +16,7 @@ import streamlit as st
 import os
 import streamlit as st
 
-TMDB_API_KEY = os.getenv("c5a29fa482955c241150b9422368d922") or st.secrets.get("c5a29fa482955c241150b9422368d922", None)
+TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
 
 if not TMDB_API_KEY:
     st.warning("TMDB_API_KEY is missing. Posters will not load.")
