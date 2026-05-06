@@ -535,21 +535,55 @@ def main():
         st.subheader("Audience Sentiment")
         st.progress(get_sentiment(movie) / 100)
 
-    with tabs[7]:
-        st.header("▶️ Reviews & Blogs")
-        movie = st.selectbox("Movie Title", movies["title"].dropna().unique(), key="yt")
+   with tabs[7]:
+
+    st.header("▶️ Reviews & Trailers")
+
+    st.subheader("Search or choose a movie")
+
+    yt_search = st.text_input(
+        "Search movie title",
+        placeholder="Type a movie name like Avatar, Matrix, Toy Story..."
+    )
+
+    if yt_search:
+        movie_options = movies[
+            movies["title"].str.contains(yt_search, case=False, na=False)
+        ]["title"].dropna().unique()
+    else:
+        movie_options = movies["title"].dropna().unique()
+
+    if len(movie_options) == 0:
+        st.warning("No movies found. Try another search.")
+    else:
+        movie = st.selectbox(
+            "Choose from results",
+            movie_options,
+            key="yt_movie_select"
+        )
+
         trailer = get_youtube_trailer(movie)
+
+        st.markdown(f"### 🎬 {movie}")
+
         if trailer:
-            st.write(f"Trailer for **{movie}**")
             st.caption(f"{trailer['title']} | Channel: {trailer['channel']}")
-            st.video(trailer["url"], autoplay=True, muted=True)
+
+            st.video(
+                trailer["url"],
+                autoplay=True,
+                muted=True
+            )
+
             st.markdown(f"[Open on YouTube]({trailer['url']})")
         else:
             search_url = get_youtube_search_url(movie)
+
             if not YOUTUBE_API_KEY:
                 st.info("Add a YOUTUBE_API_KEY environment variable to fetch real trailers automatically.")
             else:
                 st.warning("No trailer found from the YouTube API.")
+
             st.markdown(f"[🔎 Search YouTube for {movie}]({search_url})")
 
     with tabs[8]:
