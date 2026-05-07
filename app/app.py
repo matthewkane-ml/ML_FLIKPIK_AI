@@ -147,13 +147,12 @@ def inject_custom_css():
         unsafe_allow_html=True,
     )
 
-
 def render_hero():
     st.markdown(
         """
         <div class="hero">
-            <h1>🎬 Movie Recommender 6.0</h1>
-            <p>Netflix-style recommendations with real TMDB posters, smarter fallbacks, streaming badges, social buzz, trailers, model metrics, and a cleaner product-ready layout.</p>
+            <h1>🎬 FlikPik</h1>
+            <p>Find your next favorite movie with smart recommendations, posters, trailers, and personalized picks.</p>
         </div>
         """,
         unsafe_allow_html=True,
