@@ -458,8 +458,8 @@ def main():
         "⭐ Rate Movies",
         "📺 Streaming",
         "📱 Social Buzz",
-        "▶️ Reviews & Trailers,
-        "🤖 Ask FlikPik,
+        "▶️ Reviews & Trailers",
+        "🤖 Ask FlikPik",
         "👤 Insights",
     ])
 
