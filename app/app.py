@@ -458,9 +458,8 @@ def main():
         "⭐ Rate Movies",
         "📺 Streaming",
         "📱 Social Buzz",
-        "▶️ YouTube",
-        "📊 Metrics",
-        "🤖 AI Assistant",
+        "▶️ Reviews & Trailers,
+        "🤖 Ask FlikPik,
         "👤 Insights",
     ])
 
@@ -589,21 +588,6 @@ def main():
                 st.markdown(f"[🔎 Search YouTube for {movie}]({search_url})")
 
     with tabs[8]:
-        st.header("📊 Model Evaluation")
-        sample_users = st.slider("Sample Users", 25, 200, 100, 25)
-        if st.button("Run Evaluation"):
-            with st.spinner("Running evaluation..."):
-                results = compare_models(
-                    model=model,
-                    val_df=val,
-                    test_df=test,
-                    top_n=top_n,
-                    min_eval_rating=4.0,
-                    sample_users=sample_users,
-                )
-            st.dataframe(results, use_container_width=True)
-
-    with tabs[9]:
         st.header("🤖 AI Movie Assistant")
         st.caption("Ask for movies by mood, genre, decade, year, or similarity. Try: 'scary but not too old', 'like Inception after 2000', or 'funny date night movies'.")
 
@@ -693,7 +677,7 @@ def main():
                     st.markdown(f"**Assistant:** {item['response']}")
                     st.divider()
 
-    with tabs[10]:
+    with tabs[9]:
         st.header("👤 User Insights")
         ratings = profile_store.get_user_ratings(username)
         if ratings.empty:
