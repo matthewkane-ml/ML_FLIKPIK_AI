@@ -602,6 +602,7 @@ def main():
                 "Action",
                 "Mind-bending",
                 "Family",
+                "Horror",
                 "Drama",
                 "Thriller",
                 "Sci-Fi",
@@ -688,7 +689,7 @@ def main():
             st.dataframe(ratings, use_container_width=True)
 
     st.markdown("---")
-    st.caption("Movie Recommender 6.0 | Netflix-Style UI | Real Posters | Deploy Ready")
+    st.caption("Movies Your Way")
 
 
 if __name__ == "__main__":
