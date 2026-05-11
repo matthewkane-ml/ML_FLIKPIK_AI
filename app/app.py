@@ -146,15 +146,16 @@ def inject_custom_css():
         """,
         unsafe_allow_html=True,
     )
-
+    
 def render_hero():
     st.markdown(
         """
         <div class="hero">
-           <h1>🎬 StreamSense</h1>
-
-            <p>Powered by FlikPik AI • Smart movie discovery, recommendations, trailers, and personalized entertainment intelligence.
-        </p>
+            <h1>🎬 StreamSense</h1>
+            <p>Powered by FlikPik AI • Smart movie discovery, recommendations, trailers, and personalized entertainment intelligence.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
         """,
         unsafe_allow_html=True,
     )
