@@ -618,7 +618,7 @@ def main():
                 st.markdown(f"[🔎 Search YouTube for {movie}]({search_url})")
 
     with tabs[8]:
-        st.header("🤖 AI Movie Assistant")
+        st.header("🤖 Ask FlikPik")
         st.caption("Ask for movies by mood, genre, decade, year, or similarity. Try: 'scary but not too old', 'like Inception after 2000', or 'funny date night movies'.")
 
         if "chat_history" not in st.session_state:
