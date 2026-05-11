@@ -151,9 +151,10 @@ def render_hero():
     st.markdown(
         """
         <div class="hero">
-            <h1>🎬 FlikPik</h1>
-            <p>Find your next favorite movie with smart recommendations, posters, trailers, and personalized picks.</p>
-        </div>
+           <h1>🎬 StreamSense</h1>
+
+            <p>Powered by FlikPik AI • Smart movie discovery, recommendations, trailers, and personalized entertainment intelligence.
+        </p>
         """,
         unsafe_allow_html=True,
     )
