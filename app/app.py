@@ -258,6 +258,24 @@ def inject_custom_css():
             }
             .section-note { color: var(--muted); margin-top: -.35rem; margin-bottom: 1rem; }
 
+            .no-poster {
+                width: 100%;
+                aspect-ratio: 2/3;
+                min-height: 210px;
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                border-radius: 10px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: #e0e0e0;
+                font-size: 13px;
+                text-align: center;
+                padding: 12px;
+                font-family: sans-serif;
+                line-height: 1.4;
+            }
+
             .movie-card {
                 min-height: 398px;
                 padding: .72rem;
@@ -376,8 +394,8 @@ def extract_year(title):
 
 
 def placeholder_poster(title):
-    safe_title = quote_plus(clean_movie_title(title) or "Movie")
-    return f"https://placehold.co/342x513/141414/FFFFFF?text={safe_title}"
+    """Return None — callers render a CSS placeholder instead of fetching an image."""
+    return None
 
 
 @st.cache_data(show_spinner=False)
@@ -631,37 +649,34 @@ def show_movie_cards(df, score_col=None, max_items=24):
     # ------------------------------------------------------
     # Only keep movies that have a real TMDB poster AND whose image URL loads.
     # This prevents broken images from holding empty space in the Streamlit layout.
-    filtered_records = []
+    records = []
 
     for row in df.to_dict("records"):
         title = row.get("title", "Unknown")
-        poster = fetch_tmdb_poster(title) or placeholder_poster(title)
-        row["poster_url"] = poster
-        filtered_records.append(row)
+        try:
+            row["poster_url"] = fetch_tmdb_poster(title)  # None if unavailable
+        except Exception:
+            row["poster_url"] = None
+        records.append(row)
 
-        if len(filtered_records) >= max_items:
+        if len(records) >= max_items:
             break
 
-    if not filtered_records:
+    if not records:
         st.info("No movies found for this section.")
         return
 
     cols_per_row = 6
 
-    # ------------------------------------------------------
-    # DISPLAY ONLY MOVIES WITH WORKING POSTERS
-    # ------------------------------------------------------
-    for row_start in range(0, len(filtered_records), cols_per_row):
-        row_items = filtered_records[row_start : row_start + cols_per_row]
-
-        # Create only as many columns as there are valid poster cards.
+    for row_start in range(0, len(records), cols_per_row):
+        row_items = records[row_start : row_start + cols_per_row]
         cols = st.columns(len(row_items))
 
         for col, row in zip(cols, row_items):
             title = row.get("title", "Unknown")
             genres = row.get("genres", "")
             movie_id = row.get("movieId", "")
-            poster = row["poster_url"]
+            poster = row.get("poster_url")
             stream = get_streaming(title)
             total_buzz = sum(get_social(title).values())
 
@@ -675,21 +690,31 @@ def show_movie_cards(df, score_col=None, max_items=24):
             platform_html = "".join([f"<span class='pill'>{p}</span>" for p in stream[:3]])
 
             with col:
-                st.markdown("<div class='movie-card'>", unsafe_allow_html=True)
-                st.image(poster, use_container_width=True)
-                st.markdown(
-                    f"""
-                    <div class='movie-title'>{shorten(title, 58)}</div>
-                    <div class='movie-meta'>{shorten(genres, 72)}</div>
-                    <div>{platform_html}</div>
-                    {score_html}
-                    <div class='score-line'>Hype Score: {hype_score(title)} | Mentions: {total_buzz:,}</div>
-                    <div class='score-line'>Movie ID: {movie_id}</div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                st.link_button("Trailer / Reviews", get_youtube_search_url(title), use_container_width=True)
-                st.markdown("</div>", unsafe_allow_html=True)
+                try:
+                    st.markdown("<div class='movie-card'>", unsafe_allow_html=True)
+                    if poster:
+                        st.image(poster, use_container_width=True)
+                    else:
+                        safe = shorten(clean_movie_title(title) or title, 40)
+                        st.markdown(
+                            f"<div class='no-poster'>🎬<br><b>{safe}</b></div>",
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown(
+                        f"""
+                        <div class='movie-title'>{shorten(title, 58)}</div>
+                        <div class='movie-meta'>{shorten(genres, 72)}</div>
+                        <div>{platform_html}</div>
+                        {score_html}
+                        <div class='score-line'>Hype Score: {hype_score(title)} | Mentions: {total_buzz:,}</div>
+                        <div class='score-line'>Movie ID: {movie_id}</div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    st.link_button("Trailer / Reviews", get_youtube_search_url(title), use_container_width=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
+                except Exception:
+                    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ----------------------------------------------------------
