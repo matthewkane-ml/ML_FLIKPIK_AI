@@ -635,20 +635,15 @@ def show_movie_cards(df, score_col=None, max_items=24):
 
     for row in df.to_dict("records"):
         title = row.get("title", "Unknown")
-        poster = fetch_tmdb_poster(title)
-
-        if poster and poster_url_works(poster):
-            row["poster_url"] = poster
-            filtered_records.append(row)
+        poster = fetch_tmdb_poster(title) or placeholder_poster(title)
+        row["poster_url"] = poster
+        filtered_records.append(row)
 
         if len(filtered_records) >= max_items:
             break
 
     if not filtered_records:
-        if not TMDB_API_KEY:
-            st.warning("TMDB_API_KEY is missing. Add your TMDB key so the app can find movies with real posters.")
-        else:
-            st.warning("No movies with working posters were found for this section.")
+        st.info("No movies found for this section.")
         return
 
     cols_per_row = 6
