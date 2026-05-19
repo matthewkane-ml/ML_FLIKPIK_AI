@@ -293,6 +293,20 @@ def inject_custom_css():
                 background: linear-gradient(180deg, rgba(255,255,255,0.105), rgba(255,255,255,0.052));
             }
             .movie-card img { border-radius: 14px !important; }
+            .trailer-link {
+                display: block;
+                margin-top: .6rem;
+                padding: .38rem .7rem;
+                background: rgba(229,9,20,0.18);
+                border: 1px solid rgba(229,9,20,0.48);
+                border-radius: 8px;
+                color: #fff !important;
+                text-align: center;
+                text-decoration: none !important;
+                font-size: .78rem;
+                font-weight: 700;
+            }
+            .trailer-link:hover { background: rgba(229,9,20,0.38); }
             .movie-title {
                 font-weight: 850;
                 font-size: .96rem;
@@ -640,25 +654,17 @@ def show_movie_cards(df, score_col=None, max_items=24):
         st.info("No movies found.")
         return
 
-    # Remove duplicate titles so the UI does not show the same movie more than once.
     if "title" in df.columns:
         df = df.drop_duplicates(subset=["title"])
 
-    # ------------------------------------------------------
-    # FILTER BEFORE RENDERING
-    # ------------------------------------------------------
-    # Only keep movies that have a real TMDB poster AND whose image URL loads.
-    # This prevents broken images from holding empty space in the Streamlit layout.
     records = []
-
     for row in df.to_dict("records"):
         title = row.get("title", "Unknown")
         try:
-            row["poster_url"] = fetch_tmdb_poster(title)  # None if unavailable
+            row["poster_url"] = fetch_tmdb_poster(title)
         except Exception:
             row["poster_url"] = None
         records.append(row)
-
         if len(records) >= max_items:
             break
 
@@ -667,18 +673,18 @@ def show_movie_cards(df, score_col=None, max_items=24):
         return
 
     cols_per_row = 6
-
     for row_start in range(0, len(records), cols_per_row):
         row_items = records[row_start : row_start + cols_per_row]
         cols = st.columns(len(row_items))
 
         for col, row in zip(cols, row_items):
-            title = row.get("title", "Unknown")
-            genres = row.get("genres", "")
-            movie_id = row.get("movieId", "")
-            poster = row.get("poster_url")
-            stream = get_streaming(title)
-            total_buzz = sum(get_social(title).values())
+            title       = row.get("title", "Unknown")
+            genres      = row.get("genres", "")
+            movie_id    = row.get("movieId", "")
+            poster      = row.get("poster_url")
+            stream      = get_streaming(title)
+            total_buzz  = sum(get_social(title).values())
+            trailer_url = get_youtube_search_url(title)
 
             score_html = ""
             if score_col and score_col in row:
@@ -687,34 +693,35 @@ def show_movie_cards(df, score_col=None, max_items=24):
                 except Exception:
                     score_html = ""
 
-            platform_html = "".join([f"<span class='pill'>{p}</span>" for p in stream[:3]])
+            platform_html = "".join(
+                [f"<span class='pill'>{p}</span>" for p in stream[:3]]
+            )
+
+            if poster:
+                media_html = (
+                    f"<img src='{poster}' loading='lazy' "
+                    f"style='width:100%;border-radius:14px;display:block;' "
+                    f"alt='{shorten(title, 40)}'>"
+                )
+            else:
+                safe = shorten(clean_movie_title(title) or title, 40)
+                media_html = f"<div class='no-poster'>&#127916;<br><b>{safe}</b></div>"
+
+            card_html = f"""
+            <div class='movie-card'>
+                {media_html}
+                <div class='movie-title'>{shorten(title, 58)}</div>
+                <div class='movie-meta'>{shorten(genres, 72)}</div>
+                <div>{platform_html}</div>
+                {score_html}
+                <div class='score-line'>Hype Score: {hype_score(title)} | Mentions: {total_buzz:,}</div>
+                <div class='score-line'>Movie ID: {movie_id}</div>
+                <a href='{trailer_url}' target='_blank' class='trailer-link'>&#9654; Trailer / Reviews</a>
+            </div>
+            """
 
             with col:
-                try:
-                    st.markdown("<div class='movie-card'>", unsafe_allow_html=True)
-                    if poster:
-                        st.image(poster, width="stretch")
-                    else:
-                        safe = shorten(clean_movie_title(title) or title, 40)
-                        st.markdown(
-                            f"<div class='no-poster'>🎬<br><b>{safe}</b></div>",
-                            unsafe_allow_html=True,
-                        )
-                    st.markdown(
-                        f"""
-                        <div class='movie-title'>{shorten(title, 58)}</div>
-                        <div class='movie-meta'>{shorten(genres, 72)}</div>
-                        <div>{platform_html}</div>
-                        {score_html}
-                        <div class='score-line'>Hype Score: {hype_score(title)} | Mentions: {total_buzz:,}</div>
-                        <div class='score-line'>Movie ID: {movie_id}</div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    st.link_button("Trailer / Reviews", get_youtube_search_url(title), use_container_width=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
-                except Exception:
-                    st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown(card_html, unsafe_allow_html=True)
 
 
 # ----------------------------------------------------------
