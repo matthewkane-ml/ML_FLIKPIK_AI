@@ -731,8 +731,7 @@ def show_movie_cards(df, score_col=None, max_items=24):
                 <div class='movie-title'>{shorten(title, 58)}</div>
                 <div class='movie-meta'>{shorten(genres, 72)}</div>
                 <div>{platform_html}</div>
-                {score_html}
-                <div class='score-line'>Hype Score: {hype_score(title)} | Mentions: {total_buzz:,}</div>
+                {score_html}<div class='score-line'>Hype Score: {hype_score(title)} | Mentions: {total_buzz:,}</div>
                 <div class='score-line'>Movie ID: {movie_id}</div>
                 <a href='{trailer_url}' target='_blank' class='trailer-link'>&#9654; Trailer / Reviews</a>
             </div>
