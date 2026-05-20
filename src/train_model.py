@@ -4,15 +4,13 @@ Train and save the FlikPik hybrid recommender model.
 Run from the project root:
     python src/train_model.py
 
-This creates a compressed model file:
-    models/hybrid_recommender.pkl.gz
+This creates the model file used by the app:
+    models/hybrid_recommender.pkl
 
-The compressed file is smaller and easier to manage than a regular .pkl file.
-You usually should not commit large model files to GitHub. Instead, keep this
-script in the repository and regenerate the model when needed.
+Keep this script in the repository and regenerate the model when needed.
+It is also called automatically during the Render build step.
 """
 
-import gzip
 import os
 import pickle
 import sys
@@ -29,27 +27,13 @@ from data_loader import load_processed_data
 from recommender import HybridRecommender
 
 
-COMPRESSED_MODEL_PATH = f"{MODEL_PATH}.gz"
-
-
-def save_compressed_model(model, path=COMPRESSED_MODEL_PATH):
-    """Save the trained recommender as a compressed pickle file."""
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-    with gzip.open(path, "wb") as file:
-        pickle.dump(model, file, protocol=pickle.HIGHEST_PROTOCOL)
-
-    return path
-
-
 def train_and_save_model():
-    """Load processed data, train the recommender, and save it as .pkl.gz."""
+    """Load processed data, train the recommender, and save it as .pkl."""
     print("Loading processed data...")
     train, val, test, movies, genres = load_processed_data()
 
     print(f"Training rows: {len(train):,}")
     print(f"Movies: {len(movies):,}")
-    print(f"Saving compressed model to: {COMPRESSED_MODEL_PATH}")
 
     model = HybridRecommender(
         train_df=train,
@@ -61,10 +45,12 @@ def train_and_save_model():
     print("Training hybrid recommender...")
     model.fit()
 
-    saved_path = save_compressed_model(model)
+    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+    with open(MODEL_PATH, "wb") as f:
+        pickle.dump(model, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     print("Model training complete.")
-    print(f"Saved model: {saved_path}")
+    print(f"Saved model: {MODEL_PATH}")
     return model
 
 

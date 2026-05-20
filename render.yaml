@@ -1,6 +1,14 @@
 services:
   - type: web
-    name: movie-recommender-6-ui
+    name: flikpik-ai
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    plan: free
+    buildCommand: pip install -r requirements.txt && python src/train_model.py
     startCommand: streamlit run app/app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: TMDB_API_KEY
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false

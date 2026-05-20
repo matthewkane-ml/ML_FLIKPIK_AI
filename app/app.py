@@ -258,6 +258,24 @@ def inject_custom_css():
             }
             .section-note { color: var(--muted); margin-top: -.35rem; margin-bottom: 1rem; }
 
+            .no-poster {
+                width: 100%;
+                aspect-ratio: 2/3;
+                min-height: 210px;
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                border-radius: 10px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: #e0e0e0;
+                font-size: 13px;
+                text-align: center;
+                padding: 12px;
+                font-family: sans-serif;
+                line-height: 1.4;
+            }
+
             .movie-card {
                 min-height: 398px;
                 padding: .72rem;
@@ -275,6 +293,20 @@ def inject_custom_css():
                 background: linear-gradient(180deg, rgba(255,255,255,0.105), rgba(255,255,255,0.052));
             }
             .movie-card img { border-radius: 14px !important; }
+            .trailer-link {
+                display: block;
+                margin-top: .6rem;
+                padding: .38rem .7rem;
+                background: rgba(229,9,20,0.18);
+                border: 1px solid rgba(229,9,20,0.48);
+                border-radius: 8px;
+                color: #fff !important;
+                text-align: center;
+                text-decoration: none !important;
+                font-size: .78rem;
+                font-weight: 700;
+            }
+            .trailer-link:hover { background: rgba(229,9,20,0.38); }
             .movie-title {
                 font-weight: 850;
                 font-size: .96rem;
@@ -376,8 +408,29 @@ def extract_year(title):
 
 
 def placeholder_poster(title):
-    safe_title = quote_plus(clean_movie_title(title) or "Movie")
-    return f"https://placehold.co/342x513/141414/FFFFFF?text={safe_title}"
+    """Return a self-contained SVG data URI usable directly in an <img> src."""
+    import urllib.parse as _up
+    label = clean_movie_title(title) or title or "Movie"
+    if len(label) > 22:
+        label = label[:20] + "..."
+    label = (label.replace("&", "&amp;")
+                  .replace("<", "&lt;")
+                  .replace(">", "&gt;")
+                  .replace('"', "&quot;"))
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="342" height="513">'
+        '<rect width="342" height="513" fill="#1a1a2e"/>'
+        '<rect x="12" y="12" width="318" height="489" fill="#16213e" rx="10" '
+        'stroke="#2a2a4a" stroke-width="1.5"/>'
+        '<text x="171" y="220" font-family="Arial,sans-serif" font-size="64" '
+        'fill="#3a3a6a" text-anchor="middle" dominant-baseline="middle">&#9654;</text>'
+        f'<text x="171" y="300" font-family="Arial,sans-serif" font-size="16" '
+        f'font-weight="bold" fill="#c0c0d0" text-anchor="middle">{label}</text>'
+        '<text x="171" y="328" font-family="Arial,sans-serif" font-size="12" '
+        'fill="#6a6a8a" text-anchor="middle">No poster available</text>'
+        '</svg>'
+    )
+    return "data:image/svg+xml," + _up.quote(svg)
 
 
 @st.cache_data(show_spinner=False)
@@ -622,53 +675,38 @@ def show_movie_cards(df, score_col=None, max_items=24):
         st.info("No movies found.")
         return
 
-    # Remove duplicate titles so the UI does not show the same movie more than once.
     if "title" in df.columns:
         df = df.drop_duplicates(subset=["title"])
 
-    # ------------------------------------------------------
-    # FILTER BEFORE RENDERING
-    # ------------------------------------------------------
-    # Only keep movies that have a real TMDB poster AND whose image URL loads.
-    # This prevents broken images from holding empty space in the Streamlit layout.
-    filtered_records = []
-
+    records = []
     for row in df.to_dict("records"):
         title = row.get("title", "Unknown")
-        poster = fetch_tmdb_poster(title)
-
-        if poster and poster_url_works(poster):
-            row["poster_url"] = poster
-            filtered_records.append(row)
-
-        if len(filtered_records) >= max_items:
+        try:
+            tmdb = fetch_tmdb_poster(title)
+        except Exception:
+            tmdb = None
+        row["poster_url"] = tmdb or placeholder_poster(title)
+        records.append(row)
+        if len(records) >= max_items:
             break
 
-    if not filtered_records:
-        if not TMDB_API_KEY:
-            st.warning("TMDB_API_KEY is missing. Add your TMDB key so the app can find movies with real posters.")
-        else:
-            st.warning("No movies with working posters were found for this section.")
+    if not records:
+        st.info("No movies found for this section.")
         return
 
     cols_per_row = 6
-
-    # ------------------------------------------------------
-    # DISPLAY ONLY MOVIES WITH WORKING POSTERS
-    # ------------------------------------------------------
-    for row_start in range(0, len(filtered_records), cols_per_row):
-        row_items = filtered_records[row_start : row_start + cols_per_row]
-
-        # Create only as many columns as there are valid poster cards.
+    for row_start in range(0, len(records), cols_per_row):
+        row_items = records[row_start : row_start + cols_per_row]
         cols = st.columns(len(row_items))
 
         for col, row in zip(cols, row_items):
-            title = row.get("title", "Unknown")
-            genres = row.get("genres", "")
-            movie_id = row.get("movieId", "")
-            poster = row["poster_url"]
-            stream = get_streaming(title)
-            total_buzz = sum(get_social(title).values())
+            title       = row.get("title", "Unknown")
+            genres      = row.get("genres", "")
+            movie_id    = row.get("movieId", "")
+            poster      = row.get("poster_url") or placeholder_poster(title)
+            stream      = get_streaming(title)
+            total_buzz  = sum(get_social(title).values())
+            trailer_url = get_youtube_search_url(title)
 
             score_html = ""
             if score_col and score_col in row:
@@ -677,24 +715,31 @@ def show_movie_cards(df, score_col=None, max_items=24):
                 except Exception:
                     score_html = ""
 
-            platform_html = "".join([f"<span class='pill'>{p}</span>" for p in stream[:3]])
+            platform_html = "".join(
+                [f"<span class='pill'>{p}</span>" for p in stream[:3]]
+            )
+
+            img_html = (
+                f"<img src='{poster}' loading='lazy' "
+                f"style='width:100%;border-radius:14px;display:block;' "
+                f"alt='{shorten(title, 40)}'>"
+            )
+
+            card_html = f"""
+            <div class='movie-card'>
+                {img_html}
+                <div class='movie-title'>{shorten(title, 58)}</div>
+                <div class='movie-meta'>{shorten(genres, 72)}</div>
+                <div>{platform_html}</div>
+                {score_html}
+                <div class='score-line'>Hype Score: {hype_score(title)} | Mentions: {total_buzz:,}</div>
+                <div class='score-line'>Movie ID: {movie_id}</div>
+                <a href='{trailer_url}' target='_blank' class='trailer-link'>&#9654; Trailer / Reviews</a>
+            </div>
+            """
 
             with col:
-                st.markdown("<div class='movie-card'>", unsafe_allow_html=True)
-                st.image(poster, use_container_width=True)
-                st.markdown(
-                    f"""
-                    <div class='movie-title'>{shorten(title, 58)}</div>
-                    <div class='movie-meta'>{shorten(genres, 72)}</div>
-                    <div>{platform_html}</div>
-                    {score_html}
-                    <div class='score-line'>Hype Score: {hype_score(title)} | Mentions: {total_buzz:,}</div>
-                    <div class='score-line'>Movie ID: {movie_id}</div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                st.link_button("Trailer / Reviews", get_youtube_search_url(title), use_container_width=True)
-                st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown(card_html, unsafe_allow_html=True)
 
 
 # ----------------------------------------------------------
@@ -719,7 +764,7 @@ def main():
 
     with st.sidebar:
         if os.path.exists(LOGO_PATH):
-            st.image(LOGO_PATH, use_container_width=True)
+            st.image(LOGO_PATH, width="stretch")
         else:
             st.markdown("## 🎬 FlikPik AI")
             st.caption("Sit tight, we got you!")
